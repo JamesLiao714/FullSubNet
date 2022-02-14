@@ -4,7 +4,8 @@ from pesq import pesq
 import numpy as np
 import ctypes
 import logging
-import oct2py
+
+#import oct2py
 from scipy.io import wavfile
 from pystoi import stoi
 import config as cfg
@@ -16,18 +17,18 @@ import config as cfg
 # Reference 
 # https://github.com/usimarit/semetrics # https://ecs.utdallas.edu/loizou/speech/software.htm
 logging.basicConfig(level=logging.ERROR)
-oc = oct2py.Oct2Py(logger=logging.getLogger())
+#oc = oct2py.Oct2Py(logger=logging.getLogger())
 
-COMPOSITE = os.path.join(os.path.abspath(os.path.dirname(__file__)), "composite.m")
+# COMPOSITE = os.path.join(os.path.abspath(os.path.dirname(__file__)), "composite.m")
 
 
-def composite(clean: str, enhanced: str):
-    pesq_score = pesq_mos(clean, enhanced)
-    csig, cbak, covl, ssnr = oc.feval(COMPOSITE, clean, enhanced, nout=4)
-    csig += 0.603 * pesq_score
-    cbak += 0.478 * pesq_score
-    covl += 0.805 * pesq_score
-    return csig, cbak, covl, ssnr
+# def composite(clean: str, enhanced: str):
+#     pesq_score = pesq_mos(clean, enhanced)
+#     csig, cbak, covl, ssnr = oc.feval(COMPOSITE, clean, enhanced, nout=4)
+#     csig += 0.603 * pesq_score
+#     cbak += 0.478 * pesq_score
+#     covl += 0.805 * pesq_score
+#     return csig, cbak, covl, ssnr
 
 
 ############################################################################

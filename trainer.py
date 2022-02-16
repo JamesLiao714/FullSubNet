@@ -1,13 +1,15 @@
 """
 Where the model is actually trained and validated
 """
-
+import soundfile as sf
 import torch
 import numpy as np
 import tools_for_model as tools
 from tools_for_estimate import cal_pesq, cal_stoi
+import config as cfg
 
-
+def genFlac(sample, path):
+    sf.write(path, sample, 16000, format = 'flac') 
 #######################################################################
 #                             For train                               #
 #######################################################################
@@ -481,3 +483,74 @@ def crn_direct_validate(model, validation_loader, writer, dir_to_save, epoch, DE
         avg_stoi /= batch_num
 
         return validation_loss, avg_pesq, avg_stoi
+
+
+def fullsubnet_test(model, test_loader, DEVICE):
+    # initialization
+    # for record the score each samples
+    model.eval()
+    with torch.no_grad():
+        for bfn, in1, in2, in3, ol, l1, l2, l3 in tools.Bar(test_loader):
+            # create path
+            paths = [cfg.result_path + 'vocal_' + fn + '.flac' for fn in bfn]
+            # run model
+            in1 = in1.float().to(DEVICE)
+            in2 = in2.float().to(DEVICE)
+            in3 = in3.float().to(DEVICE)
+
+            noisy_complex1 = tools.stft(in1)
+            noisy_complex2 = tools.stft(in2)
+            noisy_complex3 = tools.stft(in3)
+
+            noisy_mag1, _ = tools.mag_phase(noisy_complex1)
+            noisy_mag2, _ = tools.mag_phase(noisy_complex2)
+            noisy_mag3, _ = tools.mag_phase(noisy_complex3)
+
+            cRM1 = model(noisy_mag1)
+            cRM2 = model(noisy_mag2)
+            cRM3 = model(noisy_mag3)
+            
+            # decode outputs 
+            cRM1 = tools.decompress_cIRM(cRM1)
+            cRM2 = tools.decompress_cIRM(cRM2)
+            cRM3 = tools.decompress_cIRM(cRM3)
+
+            enhanced_real1 = cRM1[..., 0] * noisy_complex1.real - cRM1[..., 1] * noisy_complex1.imag
+            enhanced_imag1 = cRM1[..., 1] * noisy_complex1.real + cRM1[..., 0] * noisy_complex1.imag
+            enhanced_complex1 = torch.stack((enhanced_real1, enhanced_imag1), dim=-1)
+            enhanced_outputs1 = tools.istft(enhanced_complex1, length=in1.size(-1))
+
+            enhanced_real2 = cRM2[..., 0] * noisy_complex2.real - cRM2[..., 1] * noisy_complex2.imag
+            enhanced_imag2 = cRM2[..., 1] * noisy_complex2.real + cRM2[..., 0] * noisy_complex2.imag
+            enhanced_complex2 = torch.stack((enhanced_real2, enhanced_imag2), dim=-1)
+            enhanced_outputs2 = tools.istft(enhanced_complex2, length=in2.size(-1))
+
+            enhanced_real3 = cRM3[..., 0] * noisy_complex3.real - cRM3[..., 1] * noisy_complex3.imag
+            enhanced_imag3 = cRM3[..., 1] * noisy_complex3.real + cRM3[..., 0] * noisy_complex3.imag
+            enhanced_complex3 = torch.stack((enhanced_real3, enhanced_imag3), dim=-1)
+            enhanced_outputs3 = tools.istft(enhanced_complex3, length=in3.size(-1))
+            # to numpy
+            enhanced_out1  = enhanced_outputs1.cpu().detach().numpy()
+            enhanced_out2  = enhanced_outputs2.cpu().detach().numpy()
+            enhanced_out3  = enhanced_outputs3.cpu().detach().numpy()
+
+            for idx, out1 in enumerate(enhanced_out1): 
+                out2 = enhanced_out2[idx]
+                out3 = enhanced_out3[idx]
+                org_l = ol[idx] #original len
+                i1_l = l1[idx] # inputs1 len
+                i2_l = l2[idx] # inputs2 len
+                i3_l = l3[idx]
+                # concat output2
+                if i2_l == 0: 
+                    # audio is less than 5sec
+                    out = out1[:i1_l]
+                else:
+                    # audio larger than 5sec
+                    a = out1[:i1_l]
+                    b = out2[:i2_l] 
+                    out = np.concatenate([a,b])  
+                if i3_l != 0:
+                    out = np.concatenate([out, out3[:i3_l]])
+                assert org_l == len(out), 'unconsistent length'
+                genFlac(out, paths[idx])

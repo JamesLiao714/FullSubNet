@@ -554,3 +554,50 @@ def fullsubnet_test(model, test_loader, DEVICE):
                     out = np.concatenate([out, out3[:i3_l]])
                 assert org_l == len(out), 'unconsistent length'
                 genFlac(out, paths[idx])
+
+
+def model_test(model, test_loader, DEVICE):
+    # initialization
+   
+   
+    model.eval()
+    with torch.no_grad():
+        for bfn, in1, in2, in3, ol, l1, l2, l3 in tools.Bar(test_loader):
+            # create path
+            paths = [cfg.result_path + 'vocal_' + fn + '.flac' for fn in bfn]
+            # run model
+            in1 = in1.float().to(DEVICE)
+            in2 = in2.float().to(DEVICE)
+            in3 = in3.float().to(DEVICE)
+            
+            # decode outputs 
+            enhanced_outputs1 =  model(in1)
+            enhanced_outputs2 =  model(in2)
+            enhanced_outputs3=  model(in3)
+
+            # to numpy
+            enhanced_out1  = enhanced_outputs1.cpu().detach().numpy()
+            enhanced_out2  = enhanced_outputs2.cpu().detach().numpy()
+            enhanced_out3  = enhanced_outputs3.cpu().detach().numpy()
+
+            for idx, out1 in enumerate(enhanced_out1): 
+                out2 = enhanced_out2[idx]
+                out3 = enhanced_out3[idx]
+                org_l = ol[idx] #original len
+                i1_l = l1[idx] # inputs1 lenq
+                i2_l = l2[idx] # inputs2 len
+                i3_l = l3[idx]
+                # concat output2
+                if i2_l == 0: 
+                    # audio is less than 5sec
+                    out = out1[:i1_l]
+                else:
+                    # audio larger than 5sec
+                    a = out1[:i1_l]
+                    b = out2[:i2_l] 
+                    out = np.concatenate([a,b])  
+                if i3_l != 0:
+                    out = np.concatenate([out, out3[:i3_l]])
+                assert org_l == len(out), 'unconsistent length'
+                genFlac(out, paths[idx])
+            

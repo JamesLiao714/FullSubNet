@@ -11,7 +11,7 @@ from trainer import model_train, model_validate, \
     model_perceptual_train, model_perceptual_validate, \
     dccrn_direct_train, dccrn_direct_validate, \
     crn_direct_train, crn_direct_validate, \
-    fullsubnet_test, fullsubnet_train
+    fullsubnet_test, model_test
 import soundfile as sf
 
 
@@ -60,7 +60,7 @@ elif cfg.masking_mode == 'Direct(None make)' and cfg.model == 'DCCRN':
 elif cfg.masking_mode == 'Direct(None make)' and cfg.model == 'CRN':
     estimator = crn_direct_validate
 else:
-    estimator = model_validate
+    estimator = model_test
 ###############################################################################
 #                              Create Dataloader                              #
 ###############################################################################

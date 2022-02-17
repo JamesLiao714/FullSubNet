@@ -5,6 +5,9 @@ import config as cfg
 import soundfile as sf
 import glob
 import pandas as pd
+import random
+import time
+
 
 
 
@@ -47,7 +50,7 @@ class Wave_Dataset(Dataset):
             self.mode = 'train'
             print('<Training dataset>')
             print('Load the data...')
-            df = df_all[df_all['type'] == 'train']
+            df = df_all
             self.df = df[['data', 'label']].reset_index(drop = True)
         elif mode == 'valid':
             self.mode = 'valid'
@@ -58,7 +61,7 @@ class Wave_Dataset(Dataset):
             # # if you want to use a part of the dataset
             # self.input = self.input[:500]
         elif mode == 'test':
-            self.mode = 'test'
+            self.mode = 'test'          
             print('<Test dataset>')
             print('Load the data...')
             self.df = df_test[['file', 'data']].reset_index(drop = True)
@@ -106,35 +109,64 @@ class Wave_Dataset(Dataset):
             except:
                 print(len(input1), len(input2))
             return fn, input1, input2, input3, ol, l1, l2, l3
-        # train, val
+        # for train, val
         else: 
+            # random slicing
+            random.seed(time.time())
             # read sounds (.flac)
             inputs_path = d['data']
             inputs_path = 'dataset/' + inputs_path
             inputs, samplerate = sf.read(inputs_path)
-            
-            if len(inputs) < max_l:
+            # noise file length
+            noise_l = len(inputs)
+            # randomly choose beg index for file that > 5s 
+            beg = random.randint(0, 1000000) % noise_l
+
+            inputs = list(inputs)
+            if noise_l < max_l:
                 #padd with 0
-                inputs = list(inputs)
-                pad = [0] * (max_l - len(inputs))
+                pad = [0] * (max_l - noise_l)
                 inputs.extend(pad)
-                inputs = np.array(inputs)
-            elif len(inputs) > max_l:
-                inputs = inputs[:max_l]
-            
+            elif noise_l > max_l:
+                #random slice
+                end = beg + max_l
+                if end > noise_l:
+                    left = end - noise_l
+                    inputs = inputs[beg:] + inputs[:left] 
+                else:
+                    inputs = inputs[beg:end]
+            try:
+                assert len(inputs) == max_l
+            except:
+                print(d)
+
+            inputs = np.array(inputs)
+
             targets_path = d['label']
             targets_path = 'dataset/'+ targets_path
             targets, samplerate = sf.read(targets_path)
-            #padd with 0
-            #518400
-            if len(targets) < max_l:
-                targets = list(targets)
-                pad = [0] * (max_l - len(targets))
-                targets.extend(pad)
-                targets = np.array(targets)
-            elif len(targets) > max_l:
-                targets = targets[:max_l]
+            clean_l = len(targets)
+            try:
+                assert clean_l == noise_l
+            except:
+                print(d)
 
+            targets = list(targets)
+            if clean_l < max_l:
+                pad = [0] * (max_l - clean_l)
+                targets.extend(pad)
+            elif len(targets) > max_l:
+                end = beg + max_l
+                if end > clean_l:
+                    left = end - clean_l
+                    targets = targets[beg:] + targets[:left] 
+                else:
+                    targets = targets[beg:end]
+            try:
+                assert len(targets) == max_l
+            except:
+                print(d)
+            targets = np.array(targets)
             # transform to torch from numpy
             inputs = torch.from_numpy(inputs)
             targets = torch.from_numpy(targets)

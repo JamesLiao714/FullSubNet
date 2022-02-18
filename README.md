@@ -63,7 +63,10 @@ The results of the network can be evaluated through various objective metrics (P
 > and you can join the loss functions with perceptual loss.   
 * LMS
 * PMSQE
-  
+
+## Test
+
+Currently support FullSubnet only.
 
 ## Reference   
 **FullSubNet: A Full-Band and Sub-Band Fusion Model for Real-Time Single-Channel Speech Enhancement**    

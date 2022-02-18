@@ -1,8 +1,13 @@
-# DNN-based Speech Enhancement in the frequency domain
+# Audio Noise Reduction competetion
+[AI cup contest link](https://aidea-web.tw/topic/8d381596-ee9d-45d5-b779-188909ccb0c8?lang=en)
+
+目前人工智慧語音識別的應用已越來越成熟、廣泛，然而背景音的干擾容易造成語音識別上的困難，因此，人聲去噪的技術將是一個重要的研究議題。
+
+本議題期望以 AI 的方式識別混音檔案中的人聲，並保留人聲的部分以進行去噪，期望獲得更純淨的人聲音訊，提高語音識別應用的服務品質。
+
 You can do speech enhancement(SE) in the frequency domain using various method through this repository.
   
 The results of the network can be evaluated through various objective metrics (PESQ, STOI, CSIG, CBAK, COVL).
-
 
 ## Requirements
 > This repository is tested on Ubuntu 20.04, and
@@ -71,4 +76,3 @@ Yanxin Hu, Yun Liu, Shubo Lv, Mengtao Xing, Shimin Zhang, Yihui Fu, Jian Wu, Bih
 https://github.com/usimarit/semetrics     
 https://ecs.utdallas.edu/loizou/speech/software.htm   
 
-# FullSubNet

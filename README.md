@@ -62,7 +62,7 @@ The results of the network can be evaluated through various objective metrics (P
 
 > and you can join the loss functions with perceptual loss.   
 * LMS
-* PMSQE
+* PMSQE(-0.5 ~ 4.5)
 
 ## Test
 

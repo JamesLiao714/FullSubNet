@@ -92,6 +92,7 @@ def fullsubnet_train(model, optimizer, train_loader, DEVICE):
     # arr = []
     # train
     model.train()
+    acc = 1
     for inputs, targets in tools.Bar(train_loader):
         batch_num += 1
 
@@ -107,14 +108,17 @@ def fullsubnet_train(model, optimizer, train_loader, DEVICE):
 
         cRM = model(noisy_mag)
         loss = model.loss(cIRM, cRM)
+        train_loss += loss
+        loss = loss / cfg.accumulation_step
+        loss.backward()
         # # if you want to check the scale of the loss
         # print('loss: {:.4}'.format(loss))
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        train_loss += loss
+        
+        if acc % cfg.accumulation_step == 0 or acc == len(train_loader):
+            optimizer.step()
+            optimizer.zero_grad()
+            
+        acc += 1
     train_loss /= batch_num
 
     return train_loss

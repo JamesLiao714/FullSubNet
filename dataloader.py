@@ -6,16 +6,7 @@ import soundfile as sf
 import glob
 import pandas as pd
 import random
-import time
-
-
-
-
-# # If you don't set the data type to object when saving the data... 
-# np_load_old = np.load
-# np.load = lambda *a, **k: np_load_old(*a, allow_pickle=True, **k)
-
-
+from sklearn.model_selection import train_test_split
 
 
 def create_dataloader(mode, type=0, snr=0):
@@ -40,27 +31,33 @@ def create_dataloader(mode, type=0, snr=0):
             batch_size=cfg.batch, shuffle=False, num_workers=0
         )
 
-
+# Dataloader for aicup competetion
 class Wave_Dataset(Dataset):
     def __init__(self, mode, type, snr):
-        # load data
-        df_all = pd.read_pickle("./dataset/dataset.pkl")
+        # Load Data
+        # train_point.pkl has less training data (select segment > 32000 (2s))
+        # Train_point2.pkl has more training data (select segment > 16000 (1s))
+        df_all = pd.read_pickle("./dataset/train_point2.pkl")
         df_test = pd.read_pickle("./dataset/dataset_test.pkl")
         if mode == 'train':
+            # Load training data
+            # df[data]: training file path
+            # df[label]: label file path
+            # df[split]: split point (for sounfile longer than 5 sec)
             self.mode = 'train'
             print('<Training dataset>')
             print('Load the data...')
             df = df_all
-            self.df = df[['data', 'label']].reset_index(drop = True)
-        elif mode == 'valid':
+            self.df = df[['data', 'label', 'split']].reset_index(drop = True)
+        if mode == 'valid':
             self.mode = 'valid'
-            print('<Validation dataset>')
-            print('Load the data...')
-            df = df_all[df_all['type'] == 'valid']
-            self.df = df[['data', 'label']].reset_index(drop = True)
-            # # if you want to use a part of the dataset
-            # self.input = self.input[:500]
+            # Split 0.02 data for validation,
+            # use random state to control randomness
+            train, valid = train_test_split(df_all, test_size = 0.02, random_state=42)
+            df = valid
+            self.df = df[['data', 'label', 'split']].reset_index(drop = True)
         elif mode == 'test':
+            # Load testing data
             self.mode = 'test'          
             print('<Test dataset>')
             print('Load the data...')
@@ -70,14 +67,14 @@ class Wave_Dataset(Dataset):
         return len(self.df)
 
     def __getitem__(self, idx):
-        max_l = 80000 # 16000*5sec
+        max_l = 80000 # 5sec * 16000 (sample rate)
         d = self.df.iloc[idx]
         if self.mode == 'test':
             fn = d['file']
             test_path = d['data']
             test_path = 'dataset/'+ test_path
             inputs, samplerate = sf.read(test_path)
-            ol = len(inputs) #original len
+            ol = len(inputs) # original test soundfile length
             l1 = 0
             l2 = 0
             l3 = 0
@@ -96,78 +93,69 @@ class Wave_Dataset(Dataset):
                     input3[:l3] = inputs[2*max_l:]
                 else:
                     input2[:l2] = inputs[max_l:]
-            #inputs less than or equal 5 min
+            # test file less than or equal 5 min
             elif ol <= max_l:
                 l1 = ol
                 input1[:ol] = inputs[:ol]
-            
+
             input1 = torch.from_numpy(input1)
             input2 = torch.from_numpy(input2)
             input3 = torch.from_numpy(input3)
+            # asser length of model input 
             try:
                 assert len(input1) == 80000 and len(input2) == 80000 and len(input3) == 80000
             except:
                 print(len(input1), len(input2))
             return fn, input1, input2, input3, ol, l1, l2, l3
-        # for train, val
-        else: 
-            # random slicing
-            random.seed(time.time())
-            # read sounds (.flac)
+        # for training&validation data
+        elif self.mode == 'train' or self.mode == 'valid': 
+            # read soundfiles (.flac)
             inputs_path = d['data']
             inputs_path = 'dataset/' + inputs_path
-            inputs, samplerate = sf.read(inputs_path)
-            # noise file length
-            noise_l = len(inputs)
-            # randomly choose beg index for file that > 5s 
-            beg = random.randint(0, 1000000) % noise_l
-
-            inputs = list(inputs)
-            if noise_l < max_l:
-                #padd with 0
-                pad = [0] * (max_l - noise_l)
-                inputs.extend(pad)
-            elif noise_l > max_l:
-                #random slice
-                end = beg + max_l
-                if end > noise_l:
-                    left = end - noise_l
-                    inputs = inputs[beg:] + inputs[:left] 
-                else:
-                    inputs = inputs[beg:end]
-            try:
-                assert len(inputs) == max_l
-            except:
-                print(d)
-
-            inputs = np.array(inputs)
-
+            # read label sounfiles
             targets_path = d['label']
             targets_path = 'dataset/'+ targets_path
+            # retrieve split point for file segmentation
+            beg = d['split']
+            inputs, samplerate = sf.read(inputs_path)
+            inputs = inputs[beg:]
+            inputs = list(inputs)
+            # noise file length
+            noise_l = len(inputs)
             targets, samplerate = sf.read(targets_path)
+            targets = targets[beg:]
+            targets = list(targets)
+            # clean file length
             clean_l = len(targets)
+            # check length match, two size should be equal
             try:
                 assert clean_l == noise_l
             except:
                 print(d)
-
-            targets = list(targets)
-            if clean_l < max_l:
-                pad = [0] * (max_l - clean_l)
+ 
+            if noise_l < max_l:
+                #padd with 0
+                pad = [0] * (max_l - noise_l)
+                inputs.extend(pad)
                 targets.extend(pad)
-            elif len(targets) > max_l:
-                end = beg + max_l
-                if end > clean_l:
-                    left = end - clean_l
-                    targets = targets[beg:] + targets[:left] 
-                else:
-                    targets = targets[beg:end]
+            elif noise_l > max_l:
+                inputs = inputs[:max_l]
+                targets = targets[:max_l]
+
+            inputs = np.array(inputs)
+            targets = np.array(targets)
+            # assert model input length == max_len
+            try:
+                assert len(inputs) == max_l
+            except:
+                print(d)
             try:
                 assert len(targets) == max_l
             except:
                 print(d)
-            targets = np.array(targets)
             # transform to torch from numpy
             inputs = torch.from_numpy(inputs)
             targets = torch.from_numpy(targets)
             return inputs, targets
+
+       

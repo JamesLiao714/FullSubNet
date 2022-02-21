@@ -6,6 +6,7 @@ import numpy as np
 import config as cfg
 from models import DCCRN, CRN, FullSubNet  # you can import 'DCCRN' or 'CRN' or 'FullSubNet'
 from write_on_tensorboard import Writer
+from torch.utils.data import random_split
 from dataloader import create_dataloader
 from trainer import model_train, model_validate, \
     model_perceptual_train, model_perceptual_validate, \
@@ -91,9 +92,11 @@ print('total params   : %d (%.2f M, %.2f MBytes)\n' %
 ###############################################################################
 #                              Create Dataloader                              #
 ###############################################################################
+
 train_loader = create_dataloader(mode='train')
 validation_loader = create_dataloader(mode='valid')
-
+print('training length:', len(train_loader))
+print('validation length:', len(validation_loader))
 ###############################################################################
 #                        Set a log file to store progress.                    #
 #               Set a hps file to store hyper-parameters information.         #

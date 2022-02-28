@@ -10,11 +10,15 @@ you have to change this file.
 #######################################################################
 job_dir = './models/'
 logs_dir = './logs/'
-chkpt_model = None  # 'FILE PATH (if you have pretrained model..)'
-chkpt = str("EPOCH")
+result_path = './result/' #submission
+chkpt_model = 'EXPERIMENT_NUMBER_2.22_FullSubNet_MSE'  # 'ep28 FILE PATH (if you have pretrained model..)'
+chkpt_model_test = 'EXPERIMENT_NUMBER_2.22_FullSubNet_MSE/chkpt_66.pt' # 18'FILE PATH (if you have pretrained model..)'
+
+
+chkpt = str(66)
 if chkpt_model is not None:
     chkpt_path = job_dir + chkpt_model + '/chkpt_' + chkpt + '.pt'
-
+    
 #######################################################################
 #                         possible setting                            #
 #######################################################################
@@ -27,13 +31,13 @@ main_net = ['LSTM', 'GRU']
 mask_type = ['Direct(None make)', 'E', 'C', 'R']
 
 # experiment number setting
-expr_num = 'EXPERIMENT_NUMBER'
+expr_num = 'Model1' #'EXPERIMENT_NUMBER'
 DEVICE = 'cuda'  # if you want to run the code with 'cpu', change 'cpu'
 #######################################################################
 #                           current setting                           #
 #######################################################################
-model = model_list[0]
-loss = loss_list[1]
+model = model_list[2]
+loss = loss_list[0]
 perceptual = perceptual_list[0]
 lstm = lstm_type[1]
 sequence_model = main_net[0]
@@ -43,8 +47,9 @@ skip_type = True   # False, if you want to remove 'skip connection'
 
 # hyper-parameters
 max_epochs = 100
-learning_rate = 0.001
-batch = 10
+learning_rate = 0.0005
+batch = 4
+accumulation_step = 12
 
 # kernel size
 dccrn_kernel_num = [32, 64, 128, 256, 256, 256]
@@ -79,6 +84,7 @@ sb_model_hidden_size = 384
 weight_init = False
 norm_type = "offline_laplace_norm"
 num_groups_in_drop_band = 2
+
 #######################################################################
 #                      setting error check                            #
 #######################################################################

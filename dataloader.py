@@ -9,7 +9,7 @@ import random
 from sklearn.model_selection import train_test_split
 
 
-def create_dataloader(mode, type=0, snr=0):
+def create_dataloader(mode,type=0, snr=0):
     if mode == 'train':
         return DataLoader(
             dataset=Wave_Dataset(mode, type, snr),
@@ -32,11 +32,14 @@ def create_dataloader(mode, type=0, snr=0):
         )
 
 # Dataloader for aicup competetion
+model = 1
 class Wave_Dataset(Dataset):
     def __init__(self, mode, type, snr):
         # Load Data
-        # train_point.pkl has less training data (select segment > 32000 (2s))
-        # Train_point2.pkl has more training data (select segment > 16000 (1s))
+        # train_point.pkl has less training data (select segment > 32000 (2s)) 
+        # best score: 1224.4674(30 epochs for 216_backup)
+        # Train_point2.pkl has more training data (select segment > 16000 (1s)) 
+        #df_all = pd.read_pickle("./dataset/train_point2.pkl")
         df_all = pd.read_pickle("./dataset/train_point2.pkl")
         df_test = pd.read_pickle("./dataset/dataset_test.pkl")
         if mode == 'train':
@@ -54,14 +57,15 @@ class Wave_Dataset(Dataset):
             # Split 0.02 data for validation,
             # use random state to control randomness
             train, valid = train_test_split(df_all, test_size = 0.02, random_state=42)
-            df = valid
-            self.df = df[['data', 'label', 'split']].reset_index(drop = True)
+            self.df = valid[['data', 'label', 'split']].reset_index(drop = True)
+            #self.df.to_pickle("./valid.pkl")  
         elif mode == 'test':
             # Load testing data
             self.mode = 'test'          
             print('<Test dataset>')
             print('Load the data...')
-            self.df = df_test[['file', 'data']].reset_index(drop = True)
+            self.df = df_test[['file',  'data']].reset_index(drop = True)
+
             
     def __len__(self):
         return len(self.df)
